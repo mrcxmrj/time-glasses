@@ -24,6 +24,7 @@ pub type Model {
 
 pub type Msg {
   UserAddedRoutine
+  UserRemovedRoutine(id: Int)
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
@@ -36,13 +37,19 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(routines: [Routine(list.length(model.routines)), ..model.routines]),
       effect.none(),
     )
+    UserRemovedRoutine(id) -> #(
+      Model(
+        routines: list.filter(model.routines, fn(routine) { routine.id != id }),
+      ),
+      effect.none(),
+    )
   }
 }
 
 fn view(model: Model) -> Element(Msg) {
   let tiles =
     list.map(model.routines, fn(routine) {
-      tile("This tile has id of " <> int.to_string(routine.id))
+      tile("This tile has id of " <> int.to_string(routine.id), routine.id)
     })
 
   html.div(
@@ -62,8 +69,12 @@ fn view(model: Model) -> Element(Msg) {
   )
 }
 
-fn tile(text: String) -> Element(a) {
-  html.div([attribute.class("text-2xl border rounded p-4 mb-4")], [
-    element.text(text),
-  ])
+fn tile(text: String, id: Int) -> Element(Msg) {
+  html.div(
+    [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
+    [
+      element.text(text),
+      html.button([event.on_click(UserRemovedRoutine(id))], [element.text("X")]),
+    ],
+  )
 }
