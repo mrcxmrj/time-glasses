@@ -578,13 +578,42 @@ video {
   }
 }
 
+.absolute {
+  position: absolute;
+}
+
+.inset-x-0 {
+  left: 0px;
+  right: 0px;
+}
+
+.bottom-4 {
+  bottom: 1rem;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
 }
 
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.h-16 {
+  height: 4rem;
+}
+
 .h-screen {
   height: 100vh;
+}
+
+.w-16 {
+  width: 4rem;
+}
+
+.overflow-auto {
+  overflow: auto;
 }
 
 .rounded {
@@ -611,4 +640,9 @@ video {
 .text-2xl {
   font-size: 1.5rem;
   line-height: 2rem;
+}
+
+.hover\:bg-gray-500:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(107 114 128 / var(--tw-bg-opacity));
 }

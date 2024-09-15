@@ -1,8 +1,11 @@
+import gleam/int
+import gleam/list
 import lustre
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/event
 
 pub fn main() {
   let app = lustre.application(init, update, view)
@@ -12,36 +15,55 @@ pub fn main() {
 }
 
 pub type Routine {
-  Routine(length: Int)
+  Routine(id: Int)
 }
 
 pub type Model {
   Model(routines: List(Routine))
 }
 
-pub type Msg
+pub type Msg {
+  UserAddedRoutine
+}
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
   #(Model([]), effect.none())
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  #(Model([]), effect.none())
+  case msg {
+    UserAddedRoutine -> #(
+      Model(routines: [Routine(list.length(model.routines)), ..model.routines]),
+      effect.none(),
+    )
+  }
 }
 
 fn view(model: Model) -> Element(Msg) {
-  html.div([attribute.class("container h-screen mx-auto border-x p-4")], [
-    tile(),
-    add_button(),
-  ])
+  let tiles =
+    list.map(model.routines, fn(routine) {
+      tile("This tile has id of " <> int.to_string(routine.id))
+    })
+
+  html.div(
+    [attribute.class("container h-screen overflow-auto mx-auto border-x p-4")],
+    [
+      html.button(
+        [
+          attribute.class(
+            "absolute inset-x-0 bottom-4 mx-auto w-16 h-16 border rounded-full p-4 text-2xl hover:bg-gray-500",
+          ),
+          event.on_click(UserAddedRoutine),
+        ],
+        [element.text("+")],
+      ),
+      ..tiles
+    ],
+  )
 }
 
-fn tile() -> Element(a) {
-  html.div([attribute.class("text-2xl border rounded p-4")], [
-    element.text("Hello, time glasses!"),
+fn tile(text: String) -> Element(a) {
+  html.div([attribute.class("text-2xl border rounded p-4 mb-4")], [
+    element.text(text),
   ])
-}
-
-fn add_button() -> Element(a) {
-  html.button([attribute.class("w-sm border rounded-full")], [element.text("+")])
 }

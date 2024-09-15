@@ -40,10 +40,10 @@ var List = class {
     return desired === 0;
   }
   countLength() {
-    let length3 = 0;
+    let length4 = 0;
     for (let _ of this)
-      length3++;
-    return length3;
+      length4++;
+    return length4;
   }
 };
 function prepend(element2, tail) {
@@ -182,6 +182,234 @@ function makeError(variant, module, line, fn, message, extra) {
 // build/dev/javascript/gleam_stdlib/gleam/option.mjs
 var None = class extends CustomType {
 };
+
+// build/dev/javascript/gleam_stdlib/gleam/dict.mjs
+function new$() {
+  return new_map();
+}
+function insert(dict, key, value) {
+  return map_insert(key, value, dict);
+}
+function reverse_and_concat(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let item = remaining.head;
+      let rest = remaining.tail;
+      loop$remaining = rest;
+      loop$accumulator = prepend(item, accumulator);
+    }
+  }
+}
+function do_keys_acc(loop$list, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let acc = loop$acc;
+    if (list.hasLength(0)) {
+      return reverse_and_concat(acc, toList([]));
+    } else {
+      let x = list.head;
+      let xs = list.tail;
+      loop$list = xs;
+      loop$acc = prepend(x[0], acc);
+    }
+  }
+}
+function do_keys(dict) {
+  let list_of_pairs = map_to_list(dict);
+  return do_keys_acc(list_of_pairs, toList([]));
+}
+function keys(dict) {
+  return do_keys(dict);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/list.mjs
+function count_length(loop$list, loop$count) {
+  while (true) {
+    let list = loop$list;
+    let count = loop$count;
+    if (list.atLeastLength(1)) {
+      let list$1 = list.tail;
+      loop$list = list$1;
+      loop$count = count + 1;
+    } else {
+      return count;
+    }
+  }
+}
+function length(list) {
+  return count_length(list, 0);
+}
+function do_reverse(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let item = remaining.head;
+      let rest$1 = remaining.tail;
+      loop$remaining = rest$1;
+      loop$accumulator = prepend(item, accumulator);
+    }
+  }
+}
+function reverse(xs) {
+  return do_reverse(xs, toList([]));
+}
+function do_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list.head;
+      let xs = list.tail;
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = prepend(fun(x), acc);
+    }
+  }
+}
+function map(list, fun) {
+  return do_map(list, fun, toList([]));
+}
+function drop(loop$list, loop$n) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let $ = n <= 0;
+    if ($) {
+      return list;
+    } else {
+      if (list.hasLength(0)) {
+        return toList([]);
+      } else {
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+      }
+    }
+  }
+}
+function do_take(loop$list, loop$n, loop$acc) {
+  while (true) {
+    let list = loop$list;
+    let n = loop$n;
+    let acc = loop$acc;
+    let $ = n <= 0;
+    if ($) {
+      return reverse(acc);
+    } else {
+      if (list.hasLength(0)) {
+        return reverse(acc);
+      } else {
+        let x = list.head;
+        let xs = list.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+        loop$acc = prepend(x, acc);
+      }
+    }
+  }
+}
+function take(list, n) {
+  return do_take(list, n, toList([]));
+}
+function fold(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list.head;
+      let rest$1 = list.tail;
+      loop$list = rest$1;
+      loop$initial = fun(initial, x);
+      loop$fun = fun;
+    }
+  }
+}
+function do_index_fold(loop$over, loop$acc, loop$with, loop$index) {
+  while (true) {
+    let over = loop$over;
+    let acc = loop$acc;
+    let with$ = loop$with;
+    let index2 = loop$index;
+    if (over.hasLength(0)) {
+      return acc;
+    } else {
+      let first$1 = over.head;
+      let rest$1 = over.tail;
+      loop$over = rest$1;
+      loop$acc = with$(acc, first$1, index2);
+      loop$with = with$;
+      loop$index = index2 + 1;
+    }
+  }
+}
+function index_fold(over, initial, fun) {
+  return do_index_fold(over, initial, fun, 0);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
+function from_strings(strings) {
+  return concat(strings);
+}
+function to_string(builder) {
+  return identity(builder);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/string.mjs
+function length3(string3) {
+  return string_length(string3);
+}
+function concat2(strings) {
+  let _pipe = strings;
+  let _pipe$1 = from_strings(_pipe);
+  return to_string(_pipe$1);
+}
+function do_slice(string3, idx, len) {
+  let _pipe = string3;
+  let _pipe$1 = graphemes(_pipe);
+  let _pipe$2 = drop(_pipe$1, idx);
+  let _pipe$3 = take(_pipe$2, len);
+  return concat2(_pipe$3);
+}
+function slice(string3, idx, len) {
+  let $ = len < 0;
+  if ($) {
+    return "";
+  } else {
+    let $1 = idx < 0;
+    if ($1) {
+      let translated_idx = length3(string3) + idx;
+      let $2 = translated_idx < 0;
+      if ($2) {
+        return "";
+      } else {
+        return do_slice(string3, translated_idx, len);
+      }
+    } else {
+      return do_slice(string3, idx, len);
+    }
+  }
+}
+function drop_left(string3, num_graphemes) {
+  let $ = num_graphemes < 0;
+  if ($) {
+    return string3;
+  } else {
+    return slice(string3, num_graphemes, length3(string3) - num_graphemes);
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/dict.mjs
 var referenceMap = /* @__PURE__ */ new WeakMap();
@@ -884,14 +1112,14 @@ var Dict = class _Dict {
 function identity(x) {
   return x;
 }
-function to_string(term) {
+function to_string3(term) {
   return term.toString();
 }
-function string_length(string2) {
-  if (string2 === "") {
+function string_length(string3) {
+  if (string3 === "") {
     return 0;
   }
-  const iterator = graphemes_iterator(string2);
+  const iterator = graphemes_iterator(string3);
   if (iterator) {
     let i = 0;
     for (const _ of iterator) {
@@ -899,20 +1127,20 @@ function string_length(string2) {
     }
     return i;
   } else {
-    return string2.match(/./gsu).length;
+    return string3.match(/./gsu).length;
   }
 }
-function graphemes(string2) {
-  const iterator = graphemes_iterator(string2);
+function graphemes(string3) {
+  const iterator = graphemes_iterator(string3);
   if (iterator) {
     return List.fromArray(Array.from(iterator).map((item) => item.segment));
   } else {
-    return List.fromArray(string2.match(/./gsu));
+    return List.fromArray(string3.match(/./gsu));
   }
 }
-function graphemes_iterator(string2) {
+function graphemes_iterator(string3) {
   if (globalThis.Intl && Intl.Segmenter) {
-    return new Intl.Segmenter().segment(string2)[Symbol.iterator]();
+    return new Intl.Segmenter().segment(string3)[Symbol.iterator]();
   }
 }
 function concat(xs) {
@@ -954,202 +1182,9 @@ function map_insert(key, value, map4) {
   return map4.set(key, value);
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/dict.mjs
-function new$() {
-  return new_map();
-}
-function insert(dict, key, value) {
-  return map_insert(key, value, dict);
-}
-function reverse_and_concat(loop$remaining, loop$accumulator) {
-  while (true) {
-    let remaining = loop$remaining;
-    let accumulator = loop$accumulator;
-    if (remaining.hasLength(0)) {
-      return accumulator;
-    } else {
-      let item = remaining.head;
-      let rest = remaining.tail;
-      loop$remaining = rest;
-      loop$accumulator = prepend(item, accumulator);
-    }
-  }
-}
-function do_keys_acc(loop$list, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let acc = loop$acc;
-    if (list.hasLength(0)) {
-      return reverse_and_concat(acc, toList([]));
-    } else {
-      let x = list.head;
-      let xs = list.tail;
-      loop$list = xs;
-      loop$acc = prepend(x[0], acc);
-    }
-  }
-}
-function do_keys(dict) {
-  let list_of_pairs = map_to_list(dict);
-  return do_keys_acc(list_of_pairs, toList([]));
-}
-function keys(dict) {
-  return do_keys(dict);
-}
-
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function to_string2(x) {
-  return to_string(x);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/list.mjs
-function do_reverse(loop$remaining, loop$accumulator) {
-  while (true) {
-    let remaining = loop$remaining;
-    let accumulator = loop$accumulator;
-    if (remaining.hasLength(0)) {
-      return accumulator;
-    } else {
-      let item = remaining.head;
-      let rest$1 = remaining.tail;
-      loop$remaining = rest$1;
-      loop$accumulator = prepend(item, accumulator);
-    }
-  }
-}
-function reverse(xs) {
-  return do_reverse(xs, toList([]));
-}
-function drop(loop$list, loop$n) {
-  while (true) {
-    let list = loop$list;
-    let n = loop$n;
-    let $ = n <= 0;
-    if ($) {
-      return list;
-    } else {
-      if (list.hasLength(0)) {
-        return toList([]);
-      } else {
-        let xs = list.tail;
-        loop$list = xs;
-        loop$n = n - 1;
-      }
-    }
-  }
-}
-function do_take(loop$list, loop$n, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let n = loop$n;
-    let acc = loop$acc;
-    let $ = n <= 0;
-    if ($) {
-      return reverse(acc);
-    } else {
-      if (list.hasLength(0)) {
-        return reverse(acc);
-      } else {
-        let x = list.head;
-        let xs = list.tail;
-        loop$list = xs;
-        loop$n = n - 1;
-        loop$acc = prepend(x, acc);
-      }
-    }
-  }
-}
-function take(list, n) {
-  return do_take(list, n, toList([]));
-}
-function fold(loop$list, loop$initial, loop$fun) {
-  while (true) {
-    let list = loop$list;
-    let initial = loop$initial;
-    let fun = loop$fun;
-    if (list.hasLength(0)) {
-      return initial;
-    } else {
-      let x = list.head;
-      let rest$1 = list.tail;
-      loop$list = rest$1;
-      loop$initial = fun(initial, x);
-      loop$fun = fun;
-    }
-  }
-}
-function do_index_fold(loop$over, loop$acc, loop$with, loop$index) {
-  while (true) {
-    let over = loop$over;
-    let acc = loop$acc;
-    let with$ = loop$with;
-    let index2 = loop$index;
-    if (over.hasLength(0)) {
-      return acc;
-    } else {
-      let first$1 = over.head;
-      let rest$1 = over.tail;
-      loop$over = rest$1;
-      loop$acc = with$(acc, first$1, index2);
-      loop$with = with$;
-      loop$index = index2 + 1;
-    }
-  }
-}
-function index_fold(over, initial, fun) {
-  return do_index_fold(over, initial, fun, 0);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
-function from_strings(strings) {
-  return concat(strings);
-}
-function to_string3(builder) {
-  return identity(builder);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/string.mjs
-function length2(string2) {
-  return string_length(string2);
-}
-function concat2(strings) {
-  let _pipe = strings;
-  let _pipe$1 = from_strings(_pipe);
-  return to_string3(_pipe$1);
-}
-function do_slice(string2, idx, len) {
-  let _pipe = string2;
-  let _pipe$1 = graphemes(_pipe);
-  let _pipe$2 = drop(_pipe$1, idx);
-  let _pipe$3 = take(_pipe$2, len);
-  return concat2(_pipe$3);
-}
-function slice(string2, idx, len) {
-  let $ = len < 0;
-  if ($) {
-    return "";
-  } else {
-    let $1 = idx < 0;
-    if ($1) {
-      let translated_idx = length2(string2) + idx;
-      let $2 = translated_idx < 0;
-      if ($2) {
-        return "";
-      } else {
-        return do_slice(string2, translated_idx, len);
-      }
-    } else {
-      return do_slice(string2, idx, len);
-    }
-  }
-}
-function drop_left(string2, num_graphemes) {
-  let $ = num_graphemes < 0;
-  if ($) {
-    return string2;
-  } else {
-    return slice(string2, num_graphemes, length2(string2) - num_graphemes);
-  }
+  return to_string3(x);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -1203,6 +1238,13 @@ var Attribute = class extends CustomType {
     this[0] = x0;
     this[1] = x1;
     this.as_property = as_property;
+  }
+};
+var Event = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
   }
 };
 function attribute_to_event_handler(attribute2) {
@@ -1268,6 +1310,9 @@ function handlers(element2) {
 // build/dev/javascript/lustre/lustre/attribute.mjs
 function attribute(name, value) {
   return new Attribute(name, identity(value), false);
+}
+function on(name, handler) {
+  return new Event("on" + name, handler);
 }
 function class$(name) {
   return attribute("class", name);
@@ -1579,25 +1624,25 @@ function createElementNode({ prev, next, dispatch, stack }) {
   return el2;
 }
 var registeredHandlers = /* @__PURE__ */ new WeakMap();
-function lustreGenericEventHandler(event) {
-  const target = event.currentTarget;
+function lustreGenericEventHandler(event2) {
+  const target = event2.currentTarget;
   if (!registeredHandlers.has(target)) {
-    target.removeEventListener(event.type, lustreGenericEventHandler);
+    target.removeEventListener(event2.type, lustreGenericEventHandler);
     return;
   }
   const handlersForEventTarget = registeredHandlers.get(target);
-  if (!handlersForEventTarget.has(event.type)) {
-    target.removeEventListener(event.type, lustreGenericEventHandler);
+  if (!handlersForEventTarget.has(event2.type)) {
+    target.removeEventListener(event2.type, lustreGenericEventHandler);
     return;
   }
-  handlersForEventTarget.get(event.type)(event);
+  handlersForEventTarget.get(event2.type)(event2);
 }
-function lustreServerEventHandler(event) {
-  const el2 = event.currentTarget;
-  const tag = el2.getAttribute(`data-lustre-on-${event.type}`);
+function lustreServerEventHandler(event2) {
+  const el2 = event2.currentTarget;
+  const tag = el2.getAttribute(`data-lustre-on-${event2.type}`);
   const data = JSON.parse(el2.getAttribute("data-lustre-data") || "{}");
   const include = JSON.parse(el2.getAttribute("data-lustre-include") || "[]");
-  switch (event.type) {
+  switch (event2.type) {
     case "input":
     case "change":
       include.push("target.value");
@@ -1608,7 +1653,7 @@ function lustreServerEventHandler(event) {
     data: include.reduce(
       (data2, property) => {
         const path = property.split(".");
-        for (let i = 0, o = data2, e = event; i < path.length; i++) {
+        for (let i = 0, o = data2, e = event2; i < path.length; i++) {
           if (i === path.length - 1) {
             o[path[i]] = e[path[i]];
           } else {
@@ -1744,8 +1789,8 @@ var LustreClientApplication = class _LustreClientApplication {
         this.#queue = [];
         this.#model = action[0][0];
         const vdom = this.#view(this.#model);
-        const dispatch = (handler, immediate = false) => (event) => {
-          const result = handler(event);
+        const dispatch = (handler, immediate = false) => (event2) => {
+          const result = handler(event2);
           if (result instanceof Ok) {
             this.send(new Dispatch(result[0], immediate));
           }
@@ -1764,10 +1809,10 @@ var LustreClientApplication = class _LustreClientApplication {
         this.#tickScheduled = window.requestAnimationFrame(() => this.#tick());
       }
     } else if (action instanceof Emit2) {
-      const event = action[0];
+      const event2 = action[0];
       const data = action[1];
       this.root.dispatchEvent(
-        new CustomEvent(event, {
+        new CustomEvent(event2, {
           detail: data,
           bubbles: true,
           composed: true
@@ -1803,8 +1848,8 @@ var LustreClientApplication = class _LustreClientApplication {
     if (!this.#flush(effects, isFirstRender))
       return;
     const vdom = this.#view(this.#model);
-    const dispatch = (handler, immediate = false) => (event) => {
-      const result = handler(event);
+    const dispatch = (handler, immediate = false) => (event2) => {
+      const result = handler(event2);
       if (result instanceof Ok) {
         this.send(new Dispatch(result[0], immediate));
       }
@@ -1823,8 +1868,8 @@ var LustreClientApplication = class _LustreClientApplication {
     while (effects.length > 0) {
       const effect = effects.shift();
       const dispatch = (msg) => this.send(new Dispatch(msg));
-      const emit2 = (event, data) => this.root.dispatchEvent(
-        new CustomEvent(event, {
+      const emit2 = (event2, data) => this.root.dispatchEvent(
+        new CustomEvent(event2, {
           detail: data,
           bubbles: true,
           composed: true
@@ -1882,9 +1927,9 @@ var LustreServerApplication = class _LustreServerApplication {
       this.#queue.push(action[0]);
       this.#tick();
     } else if (action instanceof Emit2) {
-      const event = new Emit(action[0], action[1]);
+      const event2 = new Emit(action[0], action[1]);
       for (const [_, renderer] of this.#renderers) {
-        renderer(event);
+        renderer(event2);
       }
     } else if (action instanceof Event2) {
       const handler = this.#handlers.get(action[0]);
@@ -1937,8 +1982,8 @@ var LustreServerApplication = class _LustreServerApplication {
     while (effects.length > 0) {
       const effect = effects.shift();
       const dispatch = (msg) => this.send(new Dispatch(msg));
-      const emit2 = (event, data) => this.root.dispatchEvent(
-        new CustomEvent(event, {
+      const emit2 = (event2, data) => this.root.dispatchEvent(
+        new CustomEvent(event2, {
           detail: data,
           bubbles: true,
           composed: true
@@ -1997,35 +2042,73 @@ function button(attrs, children2) {
   return element("button", attrs, children2);
 }
 
+// build/dev/javascript/lustre/lustre/event.mjs
+function on2(name, handler) {
+  return on(name, handler);
+}
+function on_click(msg) {
+  return on2("click", (_) => {
+    return new Ok(msg);
+  });
+}
+
 // build/dev/javascript/time_glasses/time_glasses.mjs
+var Routine = class extends CustomType {
+  constructor(id) {
+    super();
+    this.id = id;
+  }
+};
 var Model2 = class extends CustomType {
   constructor(routines) {
     super();
     this.routines = routines;
   }
 };
+var UserAddedRoutine = class extends CustomType {
+};
 function init2(_) {
   return [new Model2(toList([])), none()];
 }
 function update(model, msg) {
-  return [new Model2(toList([])), none()];
+  {
+    return [
+      new Model2(
+        prepend(new Routine(length(model.routines)), model.routines)
+      ),
+      none()
+    ];
+  }
 }
-function tile() {
+function tile(text2) {
   return div(
-    toList([class$("text-2xl border rounded p-4")]),
-    toList([text("Hello, time glasses!")])
-  );
-}
-function add_button() {
-  return button(
-    toList([class$("w-sm border rounded-full")]),
-    toList([text("+")])
+    toList([class$("text-2xl border rounded p-4 mb-4")]),
+    toList([text(text2)])
   );
 }
 function view(model) {
+  let tiles = map(
+    model.routines,
+    (routine) => {
+      return tile("This tile has id of " + to_string2(routine.id));
+    }
+  );
   return div(
-    toList([class$("container h-screen mx-auto border-x p-4")]),
-    toList([tile(), add_button()])
+    toList([
+      class$("container h-screen overflow-auto mx-auto border-x p-4")
+    ]),
+    prepend(
+      button(
+        toList([
+          class$(
+            "absolute inset-x-0 bottom-4 mx-auto w-16 h-16 border rounded-full p-4 text-2xl hover:bg-gray-500"
+          ),
+          on_click(new UserAddedRoutine())
+        ]),
+        toList([text("+")])
+      ),
+      tiles
+    )
   );
 }
 function main() {
@@ -2035,7 +2118,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "time_glasses",
-      9,
+      12,
       "main",
       "Assignment pattern did not match",
       { value: $ }
