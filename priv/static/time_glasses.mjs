@@ -915,16 +915,6 @@ function graphemes_iterator(string2) {
     return new Intl.Segmenter().segment(string2)[Symbol.iterator]();
   }
 }
-function join(xs, separator) {
-  const iterator = xs[Symbol.iterator]();
-  let result = iterator.next().value || "";
-  let current = iterator.next();
-  while (!current.done) {
-    result = result + separator + current.value;
-    current = iterator.next();
-  }
-  return result;
-}
 function concat(xs) {
   let result = "";
   for (const x of xs) {
@@ -1030,34 +1020,6 @@ function do_reverse(loop$remaining, loop$accumulator) {
 function reverse(xs) {
   return do_reverse(xs, toList([]));
 }
-function do_filter_map(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list.hasLength(0)) {
-      return reverse(acc);
-    } else {
-      let x = list.head;
-      let xs = list.tail;
-      let new_acc = (() => {
-        let $ = fun(x);
-        if ($.isOk()) {
-          let x$1 = $[0];
-          return prepend(x$1, acc);
-        } else {
-          return acc;
-        }
-      })();
-      loop$list = xs;
-      loop$fun = fun;
-      loop$acc = new_acc;
-    }
-  }
-}
-function filter_map(list, fun) {
-  return do_filter_map(list, fun, toList([]));
-}
 function drop(loop$list, loop$n) {
   while (true) {
     let list = loop$list;
@@ -1154,9 +1116,6 @@ function concat2(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
   return to_string3(_pipe$1);
-}
-function join2(strings, separator) {
-  return join(strings, separator);
 }
 function do_slice(string2, idx, len) {
   let _pipe = string2;
@@ -1310,25 +1269,8 @@ function handlers(element2) {
 function attribute(name, value) {
   return new Attribute(name, identity(value), false);
 }
-function classes(names) {
-  return attribute(
-    "class",
-    (() => {
-      let _pipe = names;
-      let _pipe$1 = filter_map(
-        _pipe,
-        (class$) => {
-          let $ = class$[1];
-          if ($) {
-            return new Ok(class$[0]);
-          } else {
-            return new Error(void 0);
-          }
-        }
-      );
-      return join2(_pipe$1, " ");
-    })()
-  );
+function class$(name) {
+  return attribute("class", name);
 }
 
 // build/dev/javascript/lustre/lustre/element.mjs
@@ -2051,20 +1993,39 @@ function start2(app, selector, flags) {
 function div(attrs, children2) {
   return element("div", attrs, children2);
 }
+function button(attrs, children2) {
+  return element("button", attrs, children2);
+}
 
 // build/dev/javascript/time_glasses/time_glasses.mjs
 var Model2 = class extends CustomType {
+  constructor(routines) {
+    super();
+    this.routines = routines;
+  }
 };
 function init2(_) {
-  return [new Model2(), none()];
+  return [new Model2(toList([])), none()];
 }
 function update(model, msg) {
-  return [new Model2(), none()];
+  return [new Model2(toList([])), none()];
+}
+function tile() {
+  return div(
+    toList([class$("text-2xl border rounded p-4")]),
+    toList([text("Hello, time glasses!")])
+  );
+}
+function add_button() {
+  return button(
+    toList([class$("w-sm border rounded-full")]),
+    toList([text("+")])
+  );
 }
 function view(model) {
   return div(
-    toList([classes(toList([["text-2xl", true]]))]),
-    toList([text("Hello, time glasses!")])
+    toList([class$("container h-screen mx-auto border-x p-4")]),
+    toList([tile(), add_button()])
   );
 }
 function main() {
