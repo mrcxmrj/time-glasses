@@ -14,8 +14,12 @@ pub fn main() {
   Nil
 }
 
-pub type Routine {
-  Routine(id: Int)
+type Step {
+  Step(text: String, minutes_before: Int)
+}
+
+type Routine {
+  Routine(id: Int, steps: List(Step))
 }
 
 type Page {
@@ -25,27 +29,29 @@ type Page {
 }
 
 type Model {
-  Model(current_page: Page, routines: List(Routine))
+  Model(current_page: Page, routines: List(Routine), visible_steps: List(Step))
 }
 
 type Msg {
-  UserAddedRoutine
+  UserAddedRoutine(Routine)
   UserRemovedRoutine(Routine)
   UserClickedAddRoutine
-  UserClickedRoutine(Routine)
+  // UserClickedRoutine(Routine)
+  UserAddedStep(Step)
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(Home, []), effect.none())
+  #(Model(Home, [], []), effect.none())
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UserAddedRoutine -> #(
-      Model(current_page: Home, routines: [
-        Routine(list.length(model.routines)),
-        ..model.routines
-      ]),
+    UserAddedRoutine(routine) -> #(
+      Model(
+        current_page: Home,
+        routines: [routine, ..model.routines],
+        visible_steps: [],
+      ),
       effect.none(),
     )
     UserRemovedRoutine(removed_routine) -> #(
@@ -61,7 +67,11 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(..model, current_page: CreateRoutine),
       effect.none(),
     )
-    _ -> #(model, effect.none())
+    UserAddedStep(step) -> #(
+      Model(..model, visible_steps: [step, ..model.visible_steps]),
+      effect.none(),
+    )
+    // _ -> #(model, effect.none())
     // UserClickedRoutine(routine) -> #(
     //   Model(..model, current_page: CreateRoutine),
     //   effect.none(),
@@ -83,10 +93,7 @@ fn view(model: Model) -> Element(Msg) {
 }
 
 fn view_home(model: Model) -> Element(Msg) {
-  let tiles =
-    list.map(model.routines, fn(routine) {
-      routine_tile("This tile has id of " <> int.to_string(routine.id), routine)
-    })
+  let tiles = list.map(model.routines, fn(routine) { routine_tile(routine) })
 
   html.div([], [
     html.button(
@@ -103,12 +110,34 @@ fn view_home(model: Model) -> Element(Msg) {
 }
 
 fn view_create_routine(model: Model) -> Element(Msg) {
+  let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
+
   html.div([], [
-    html.button([event.on_click(UserAddedRoutine)], [element.text("create")]),
+    html.button(
+      [
+        event.on_click(
+          UserAddedRoutine(Routine(
+            id: list.length(model.routines),
+            steps: model.visible_steps,
+          )),
+        ),
+      ],
+      [element.text("create routine")],
+    ),
+    html.button(
+      [
+        event.on_click(
+          UserAddedStep(Step(text: "do sth", minutes_before: 2137)),
+        ),
+      ],
+      [element.text("create step")],
+    ),
+    ..step_tiles
   ])
 }
 
-fn routine_tile(text: String, routine: Routine) -> Element(Msg) {
+fn routine_tile(routine: Routine) -> Element(Msg) {
+  let text = "This tile has id of " <> int.to_string(routine.id)
   html.div(
     [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
     [
@@ -117,5 +146,13 @@ fn routine_tile(text: String, routine: Routine) -> Element(Msg) {
         element.text("X"),
       ]),
     ],
+  )
+}
+
+fn step_tile(step: Step) -> Element(Msg) {
+  let text = step.text <> " | -" <> int.to_string(step.minutes_before) <> "min"
+  html.div(
+    [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
+    [element.text(text)],
   )
 }
