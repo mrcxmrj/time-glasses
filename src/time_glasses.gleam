@@ -1,5 +1,7 @@
+import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/int
 import gleam/list
+import gleam/result
 import lustre
 import lustre/attribute
 import lustre/effect.{type Effect}
@@ -19,12 +21,13 @@ type Step {
 }
 
 type Routine {
-  Routine(id: Int, steps: List(Step))
+  Routine(id: String, steps: List(Step))
 }
 
 type Page {
   Home
   CreateRoutine
+  EditRoutine(Routine)
   RunRoutine
 }
 
@@ -33,15 +36,30 @@ type Model {
 }
 
 type Msg {
-  UserAddedRoutine(Routine)
-  UserRemovedRoutine(Routine)
   UserClickedAddRoutine
-  // UserClickedRoutine(Routine)
+
+  UserAddedRoutine(Routine)
+  UserUpdatedRoutine(Routine)
+  UserRemovedRoutine(Routine)
+  UserClickedRoutine(Routine)
+
   UserAddedStep(Step)
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
   #(Model(Home, [], []), effect.none())
+}
+
+fn get_updated_routines(
+  routines: List(Routine),
+  new_routine: Routine,
+) -> List(Routine) {
+  list.map(routines, fn(routine) {
+    case routine.id == new_routine.id {
+      True -> new_routine
+      False -> routine
+    }
+  })
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -50,6 +68,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(
         current_page: Home,
         routines: [routine, ..model.routines],
+        visible_steps: [],
+      ),
+      effect.none(),
+    )
+    UserUpdatedRoutine(routine) -> #(
+      Model(
+        current_page: Home,
+        routines: get_updated_routines(model.routines, routine),
         visible_steps: [],
       ),
       effect.none(),
@@ -71,11 +97,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(..model, visible_steps: [step, ..model.visible_steps]),
       effect.none(),
     )
-    // _ -> #(model, effect.none())
-    // UserClickedRoutine(routine) -> #(
-    //   Model(..model, current_page: CreateRoutine),
-    //   effect.none(),
-    // )
+    UserClickedRoutine(routine) -> #(
+      Model(
+        ..model,
+        current_page: EditRoutine(routine),
+        visible_steps: routine.steps,
+      ),
+      effect.none(),
+    )
   }
 }
 
@@ -86,14 +115,18 @@ fn view(model: Model) -> Element(Msg) {
       case model.current_page {
         Home -> view_home(model)
         CreateRoutine -> view_create_routine(model)
-        _ -> element.text("not implemented")
+        EditRoutine(routine) -> view_edit_routine(model, routine)
+        RunRoutine -> todo
       },
     ],
   )
 }
 
 fn view_home(model: Model) -> Element(Msg) {
-  let tiles = list.map(model.routines, fn(routine) { routine_tile(routine) })
+  let tiles =
+    model.routines
+    |> list.map(fn(routine) { routine_tile(routine) })
+    |> list.reverse()
 
   html.div([], [
     html.button(
@@ -117,7 +150,7 @@ fn view_create_routine(model: Model) -> Element(Msg) {
       [
         event.on_click(
           UserAddedRoutine(Routine(
-            id: list.length(model.routines),
+            id: model.routines |> list.length() |> int.to_string(),
             steps: model.visible_steps,
           )),
         ),
@@ -136,13 +169,46 @@ fn view_create_routine(model: Model) -> Element(Msg) {
   ])
 }
 
+fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
+  let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
+  let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
+    use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
+    use value <- result.try(dynamic.field("value", dynamic.string)(target))
+    Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
+  }
+
+  html.div([], [
+    html.button(
+      [attribute.value(edited_routine.id), event.on("click", handle_commit)],
+      [element.text("update routine")],
+    ),
+    html.button(
+      [
+        event.on_click(
+          UserAddedStep(Step(text: "do sth", minutes_before: 2137)),
+        ),
+      ],
+      [element.text("create step")],
+    ),
+    ..step_tiles
+  ])
+}
+
 fn routine_tile(routine: Routine) -> Element(Msg) {
-  let text = "This tile has id of " <> int.to_string(routine.id)
+  let text = "This tile has id of " <> routine.id
+  let handle_click = fn(event) {
+    event.stop_propagation(event)
+    Ok(UserRemovedRoutine(routine))
+  }
+
   html.div(
-    [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
+    [
+      event.on_click(UserClickedRoutine(routine)),
+      attribute.class("flex justify-between text-2xl border rounded p-4 mb-4"),
+    ],
     [
       element.text(text),
-      html.button([event.on_click(UserRemovedRoutine(routine))], [
+      html.button([event.on("click", handle_click), attribute.class("border")], [
         element.text("X"),
       ]),
     ],
@@ -151,6 +217,7 @@ fn routine_tile(routine: Routine) -> Element(Msg) {
 
 fn step_tile(step: Step) -> Element(Msg) {
   let text = step.text <> " | -" <> int.to_string(step.minutes_before) <> "min"
+
   html.div(
     [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
     [element.text(text)],
