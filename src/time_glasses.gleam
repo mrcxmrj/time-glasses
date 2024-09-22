@@ -1,9 +1,10 @@
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import lustre
-import lustre/attribute
+import lustre/attribute.{type Attribute}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
@@ -31,8 +32,17 @@ type Page {
   RunRoutine
 }
 
+type Modal {
+  AddStepModal
+}
+
 type Model {
-  Model(current_page: Page, routines: List(Routine), visible_steps: List(Step))
+  Model(
+    current_page: Page,
+    routines: List(Routine),
+    visible_steps: List(Step),
+    visible_modal: Option(Modal),
+  )
 }
 
 type Msg {
@@ -43,11 +53,12 @@ type Msg {
   UserRemovedRoutine(Routine)
   UserClickedRoutine(Routine)
 
+  UserClickedAddStep
   UserAddedStep(Step)
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(Home, [], []), effect.none())
+  #(Model(Home, [], [], None), effect.none())
 }
 
 fn get_updated_routines(
@@ -66,6 +77,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UserAddedRoutine(routine) -> #(
       Model(
+        ..model,
         current_page: Home,
         routines: [routine, ..model.routines],
         visible_steps: [],
@@ -74,6 +86,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     )
     UserUpdatedRoutine(routine) -> #(
       Model(
+        ..model,
         current_page: Home,
         routines: get_updated_routines(model.routines, routine),
         visible_steps: [],
@@ -91,6 +104,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     )
     UserClickedAddRoutine -> #(
       Model(..model, current_page: CreateRoutine),
+      effect.none(),
+    )
+    UserClickedAddStep -> #(
+      Model(..model, visible_modal: Some(AddStepModal)),
       effect.none(),
     )
     UserAddedStep(step) -> #(
@@ -143,45 +160,36 @@ fn view_home(model: Model) -> Element(Msg) {
 }
 
 fn view_create_routine(model: Model) -> Element(Msg) {
-  let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
-
-  html.div([], [
-    html.button(
-      [
-        event.on_click(
-          UserAddedRoutine(Routine(
-            id: model.routines |> list.length() |> int.to_string(),
-            steps: model.visible_steps,
-          )),
-        ),
-      ],
-      [element.text("create routine")],
+  [
+    event.on_click(
+      UserAddedRoutine(Routine(
+        id: model.routines |> list.length() |> int.to_string(),
+        steps: model.visible_steps,
+      )),
     ),
-    html.button(
-      [
-        event.on_click(
-          UserAddedStep(Step(text: "do sth", minutes_before: 2137)),
-        ),
-      ],
-      [element.text("create step")],
-    ),
-    ..step_tiles
-  ])
+  ]
+  |> routine(model, _, "create routine")
 }
 
 fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
-  let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
   let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
     use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
     use value <- result.try(dynamic.field("value", dynamic.string)(target))
     Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
   }
+  [attribute.value(edited_routine.id), event.on("click", handle_commit)]
+  |> routine(model, _, "update routine")
+}
+
+fn routine(
+  model: Model,
+  commit_routine_attrs: List(Attribute(Msg)),
+  commit_routine_label: String,
+) -> Element(Msg) {
+  let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
 
   html.div([], [
-    html.button(
-      [attribute.value(edited_routine.id), event.on("click", handle_commit)],
-      [element.text("update routine")],
-    ),
+    html.button(commit_routine_attrs, [element.text(commit_routine_label)]),
     html.button(
       [
         event.on_click(
