@@ -33,7 +33,7 @@ type Page {
 }
 
 type Modal {
-  AddStepModal
+  AddStepModal(text: String, minutes_before: Int)
 }
 
 type Model {
@@ -54,6 +54,9 @@ type Msg {
   UserClickedRoutine(Routine)
 
   UserClickedAddStep
+  UserChangedAddStepModalText(String)
+  UserChangedAddStepModalTimeValue(Int)
+  UserGaveIncorrectAddStepModalInput
   UserAddedStep(Step)
 }
 
@@ -107,11 +110,37 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       effect.none(),
     )
     UserClickedAddStep -> #(
-      Model(..model, visible_modal: Some(AddStepModal)),
+      Model(..model, visible_modal: Some(AddStepModal("", 0))),
+      effect.none(),
+    )
+    UserChangedAddStepModalTimeValue(time_value) -> #(
+      Model(
+        ..model,
+        visible_modal: option.map(model.visible_modal, fn(modal) {
+          AddStepModal(..modal, minutes_before: time_value)
+        }),
+      ),
+      effect.none(),
+    )
+    UserGaveIncorrectAddStepModalInput -> {
+      let model_copy = model
+      #(model_copy, effect.none())
+    }
+    UserChangedAddStepModalText(text) -> #(
+      Model(
+        ..model,
+        visible_modal: option.map(model.visible_modal, fn(modal) {
+          AddStepModal(..modal, text:)
+        }),
+      ),
       effect.none(),
     )
     UserAddedStep(step) -> #(
-      Model(..model, visible_steps: [step, ..model.visible_steps]),
+      Model(
+        ..model,
+        visible_steps: [step, ..model.visible_steps],
+        visible_modal: None,
+      ),
       effect.none(),
     )
     UserClickedRoutine(routine) -> #(
@@ -187,13 +216,20 @@ fn routine(
   commit_routine_label: String,
 ) -> Element(Msg) {
   let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
+  let modal = case model.visible_modal {
+    Some(AddStepModal(text, minutes_before)) ->
+      add_step_modal(text, minutes_before)
+    None -> element.none()
+  }
 
   html.div([], [
+    modal,
     html.button(commit_routine_attrs, [element.text(commit_routine_label)]),
     html.button(
       [
         event.on_click(
-          UserAddedStep(Step(text: "do sth", minutes_before: 2137)),
+          UserClickedAddStep,
+          // UserAddedStep(Step(text: "do sth", minutes_before: 2137)),
         ),
       ],
       [element.text("create step")],
@@ -229,5 +265,46 @@ fn step_tile(step: Step) -> Element(Msg) {
   html.div(
     [attribute.class("flex justify-between text-2xl border rounded p-4 mb-4")],
     [element.text(text)],
+  )
+}
+
+fn add_step_modal(text: String, minutes_before: Int) -> Element(Msg) {
+  let handle_time_input = fn(input) {
+    case int.parse(input) {
+      Ok(value) -> UserChangedAddStepModalTimeValue(value)
+      _ -> UserGaveIncorrectAddStepModalInput
+    }
+  }
+  html.div(
+    [
+      attribute.class(
+        "absolute inset-0 z-10 flex justify-center items-center h-screen",
+      ),
+    ],
+    [
+      html.div([attribute.class("h-max w-max p-4 border rounded")], [
+        element.text("I need to "),
+        html.input([
+          event.on_input(UserChangedAddStepModalText),
+          attribute.class(""),
+          attribute.type_("text"),
+          attribute.value(text),
+          attribute.min("0"),
+        ]),
+        html.br([]),
+        html.input([
+          event.on_input(handle_time_input),
+          attribute.class("w-12"),
+          attribute.type_("number"),
+          attribute.value(int.to_string(minutes_before)),
+          attribute.min("0"),
+        ]),
+        element.text(" minutes before"),
+        html.button(
+          [event.on_click(UserAddedStep(Step(text, minutes_before)))],
+          [element.text("Ok")],
+        ),
+      ]),
+    ],
   )
 }
