@@ -1,6 +1,7 @@
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/int
 import gleam/io
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -10,6 +11,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import routine.{type Routine, type Step, Routine, Step}
 
 pub fn main() {
   let app = lustre.application(init, update, view)
@@ -18,13 +20,13 @@ pub fn main() {
   Nil
 }
 
-type Step {
-  Step(id: String, text: String, minutes_before: Int)
-}
-
-type Routine {
-  Routine(id: String, steps: List(Step))
-}
+// type Step {
+//   Step(id: String, text: String, minutes_before: Int)
+// }
+//
+// type Routine {
+//   Routine(id: String, steps: List(Step))
+// }
 
 type Page {
   Home
@@ -63,6 +65,24 @@ type Msg {
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
+  routine.routine_to_json(
+    Routine(id: "21", steps: [
+      Step("asdf", "I'm a step, this is my description", 2137),
+      Step("ff", "I'm a step, this is my description aaaa", 2137),
+      Step("aa", "I'm a step, this is my description 23", 2137),
+    ]),
+  )
+  |> io.debug()
+  |> routine.routine_from_json()
+  |> io.debug()
+  // let step_json =
+  //   routine.step_to_json(Step(
+  //     "asdf",
+  //     "I'm a step, this is my description",
+  //     2137,
+  //   ))
+  // io.debug(step_json)
+  // routine.step_from_json(step_json)
   #(Model(Home, [], [], None), effect.none())
 }
 
