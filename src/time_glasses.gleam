@@ -259,7 +259,7 @@ fn view_create_routine(model: Model) -> Element(Msg) {
       )),
     ),
   ]
-  |> routine(model, _, "create routine")
+  |> routine_editor(model, _, "create routine")
 }
 
 fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
@@ -269,10 +269,10 @@ fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
     Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
   }
   [attribute.value(edited_routine.id), event.on("click", handle_commit)]
-  |> routine(model, _, "update routine")
+  |> routine_editor(model, _, "update routine")
 }
 
-fn routine(
+fn routine_editor(
   model: Model,
   commit_routine_attrs: List(Attribute(Msg)),
   commit_routine_label: String,
