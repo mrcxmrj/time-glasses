@@ -65,42 +65,15 @@ type Msg {
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  // routine.routines_to_json([
-  //   Routine(id: "21", steps: [
-  //     Step("asdf", "I'm a step, this is my description", 2137),
-  //     Step("ff", "I'm a step, this is my description aaaa", 2137),
-  //     Step("aa", "I'm a step, this is my description 23", 2137),
-  //   ]),
-  //   Routine(id: "23", steps: [
-  //     Step("ff", "I'm a step, this is my description aaaa", 2137),
-  //     Step("aa", "I'm a step, this is my description 23", 2137),
-  //   ]),
-  // ])
-  // |> io.debug()
-  // |> routine.routines_from_json()
-  // |> io.debug()
-  // let step_json =
-  //   routine.step_to_json(Step(
-  //     "asdf",
-  //     "I'm a step, this is my description",
-  //     2137,
-  //   ))
-  // io.debug(step_json)
-  // routine.step_from_json(step_json)
-  [
-    Routine(id: "21", steps: [
-      Step("asdf", "I'm a step, this is my description", 2137),
-      Step("ff", "I'm a step, this is my description aaaa", 2137),
-      Step("aa", "I'm a step, this is my description 23", 2137),
-    ]),
-    Routine(id: "23", steps: [
-      Step("ff", "I'm a step, this is my description aaaa", 2137),
-      Step("aa", "I'm a step, this is my description 23", 2137),
-    ]),
-  ]
-  |> routine.save_routines()
-  |> io.debug()
-  #(Model(Home, [], [], None), effect.none())
+  #(
+    Model(
+      current_page: Home,
+      routines: routine.get_saved_routines(),
+      visible_steps: [],
+      visible_modal: None,
+    ),
+    effect.none(),
+  )
 }
 
 fn new_element_id(elements: List(_)) -> String {
@@ -142,33 +115,35 @@ fn get_added_or_updated_steps(steps: List(Step), new_step: Step) -> List(Step) {
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UserAddedRoutine(routine) -> #(
-      Model(
-        ..model,
-        current_page: Home,
-        routines: [routine, ..model.routines],
-        visible_steps: [],
-      ),
-      effect.none(),
-    )
+    UserAddedRoutine(routine) -> {
+      let updated_routines = [routine, ..model.routines]
+      case routine.save_routines(updated_routines) {
+        Ok(Nil) -> #(
+          Model(
+            ..model,
+            current_page: Home,
+            routines: updated_routines,
+            visible_steps: [],
+          ),
+          effect.none(),
+        )
+        Error(Nil) -> #(model, effect.none())
+      }
+    }
     UserUpdatedRoutine(routine) -> {
-      io.debug(model.routines)
-      io.debug(routine)
-      io.debug(get_updated_elements(
-        model.routines,
-        fn(r) { r.id },
-        routine,
-        routine.id,
-      ))
-      #(
-        Model(
-          ..model,
-          current_page: Home,
-          routines: get_updated_routines(model.routines, routine),
-          visible_steps: [],
-        ),
-        effect.none(),
-      )
+      let updated_routines = get_updated_routines(model.routines, routine)
+      case routine.save_routines(updated_routines) {
+        Ok(Nil) -> #(
+          Model(
+            ..model,
+            current_page: Home,
+            routines: updated_routines,
+            visible_steps: [],
+          ),
+          effect.none(),
+        )
+        Error(Nil) -> #(model, effect.none())
+      }
     }
     UserRemovedRoutine(removed_routine) -> #(
       Model(

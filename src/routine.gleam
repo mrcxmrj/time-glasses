@@ -1,7 +1,9 @@
 import ffi/local_storage
 import gleam/dynamic.{type Decoder}
+import gleam/io
 import gleam/json.{type DecodeError, type Json}
 import gleam/list
+import gleam/result
 
 pub type Routine {
   Routine(id: String, steps: List(Step))
@@ -72,4 +74,29 @@ pub fn save_routines(routines: List(Routine)) -> Result(Nil, Nil) {
   routines
   |> routines_to_json()
   |> local_storage.set_item("routines", _)
+}
+
+type GetSavedRoutinesError {
+  DecodeError(DecodeError)
+  LocalStorageError(Nil)
+}
+
+pub fn get_saved_routines() -> List(Routine) {
+  let result =
+    local_storage.get_item("routines")
+    |> result.map_error(LocalStorageError)
+    |> result.try(fn(r) {
+      routines_from_json(r) |> result.map_error(DecodeError)
+    })
+  case result {
+    Ok(routines) -> routines
+    Error(DecodeError(_)) -> {
+      io.print_error("Error decoding routines")
+      []
+    }
+    Error(LocalStorageError(Nil)) -> {
+      io.print_error("Error reading from local storage")
+      []
+    }
+  }
 }
