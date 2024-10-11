@@ -1,3 +1,4 @@
+import ffi/local_storage
 import gleam/dynamic.{type Decoder}
 import gleam/json.{type DecodeError, type Json}
 import gleam/list
@@ -65,4 +66,10 @@ pub fn routines_from_json(
 ) -> Result(List(Routine), DecodeError) {
   let routines_decoder = dynamic.list(routine_decoder())
   json.decode(json_string, routines_decoder)
+}
+
+pub fn save_routines(routines: List(Routine)) -> Result(Nil, Nil) {
+  routines
+  |> routines_to_json()
+  |> local_storage.set_item("routines", _)
 }
