@@ -65,15 +65,19 @@ type Msg {
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
-  routine.routine_to_json(
+  routine.routines_to_json([
     Routine(id: "21", steps: [
       Step("asdf", "I'm a step, this is my description", 2137),
       Step("ff", "I'm a step, this is my description aaaa", 2137),
       Step("aa", "I'm a step, this is my description 23", 2137),
     ]),
-  )
+    Routine(id: "23", steps: [
+      Step("ff", "I'm a step, this is my description aaaa", 2137),
+      Step("aa", "I'm a step, this is my description 23", 2137),
+    ]),
+  ])
   |> io.debug()
-  |> routine.routine_from_json()
+  |> routine.routines_from_json()
   |> io.debug()
   // let step_json =
   //   routine.step_to_json(Step(

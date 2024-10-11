@@ -29,6 +29,13 @@ pub fn routine_to_json(routine: Routine) -> String {
   routine |> encode_routine() |> json.to_string()
 }
 
+pub fn routines_to_json(routines: List(Routine)) -> String {
+  routines
+  |> list.map(encode_routine)
+  |> json.preprocessed_array()
+  |> json.to_string()
+}
+
 fn steps_decoder() -> Decoder(List(Step)) {
   let step_decoder =
     dynamic.decode3(
@@ -51,4 +58,11 @@ fn routine_decoder() -> Decoder(Routine) {
 
 pub fn routine_from_json(json_string: String) -> Result(Routine, DecodeError) {
   json.decode(json_string, routine_decoder())
+}
+
+pub fn routines_from_json(
+  json_string: String,
+) -> Result(List(Routine), DecodeError) {
+  let routines_decoder = dynamic.list(routine_decoder())
+  json.decode(json_string, routines_decoder)
 }
