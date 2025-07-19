@@ -1,4 +1,6 @@
+import gleam/dynamic/decode
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre
@@ -271,14 +273,36 @@ fn view_create_routine(model: Model) -> Element(Msg) {
 }
 
 fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
-  todo
+  // let on_click =
+  //   event.on("click", {
+  //     // use x <- decode.field("offsetX", decode.int)
+  //     // use y <- decode.field("offsetY", decode.int)
+  //     // use target <- decode.field("target", decode.dynamic)
+  //     use value <- decode.field("value", decode.string)
+  //
+  //     io.print("commiting" <> value <> "!")
+  //     decode.success(
+  //       UserUpdatedRoutine(Routine(
+  //         id: edited_routine.id,
+  //         steps: model.visible_steps,
+  //       )),
+  //     )
+  //   })
   // let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
   //   use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
   //   use value <- result.try(dynamic.field("value", dynamic.string)(target))
   //   Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
   // }
-  // [attribute.value(edited_routine.id), event.on("click", handle_commit)]
-  // |> routine_editor(model, _, "update routine")
+  [
+    attribute.value(edited_routine.id),
+    event.on_click(
+      UserUpdatedRoutine(Routine(
+        id: edited_routine.id,
+        steps: model.visible_steps,
+      )),
+    ),
+  ]
+  |> routine_editor(model, _, "update routine")
 }
 
 fn routine_editor(
