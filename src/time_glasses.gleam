@@ -1,10 +1,6 @@
-import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/int
-import gleam/io
-import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/result
 import lustre
 import lustre/attribute.{type Attribute}
 import lustre/effect.{type Effect}
@@ -275,13 +271,14 @@ fn view_create_routine(model: Model) -> Element(Msg) {
 }
 
 fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
-  let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
-    use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
-    use value <- result.try(dynamic.field("value", dynamic.string)(target))
-    Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
-  }
-  [attribute.value(edited_routine.id), event.on("click", handle_commit)]
-  |> routine_editor(model, _, "update routine")
+  todo
+  // let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
+  //   use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
+  //   use value <- result.try(dynamic.field("value", dynamic.string)(target))
+  //   Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
+  // }
+  // [attribute.value(edited_routine.id), event.on("click", handle_commit)]
+  // |> routine_editor(model, _, "update routine")
 }
 
 fn routine_editor(
@@ -316,11 +313,6 @@ fn step_tile(step: Step) -> Element(Msg) {
 }
 
 fn tile(text: String, edit_msg: m, remove_msg: m) -> Element(m) {
-  let handle_click = fn(event) {
-    event.stop_propagation(event)
-    Ok(remove_msg)
-  }
-
   html.div(
     [
       event.on_click(edit_msg),
@@ -328,9 +320,13 @@ fn tile(text: String, edit_msg: m, remove_msg: m) -> Element(m) {
     ],
     [
       element.text(text),
-      html.button([event.on("click", handle_click), attribute.class("border")], [
-        element.text("X"),
-      ]),
+      html.button(
+        [
+          event.on_click(remove_msg) |> event.stop_propagation(),
+          attribute.class("border"),
+        ],
+        [element.text("X")],
+      ),
     ],
   )
 }

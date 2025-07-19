@@ -1,5 +1,5 @@
 import ffi/local_storage
-import gleam/dynamic.{type Decoder}
+import gleam/dynamic/decode.{type Decoder}
 import gleam/io
 import gleam/json.{type DecodeError, type Json}
 import gleam/list
@@ -40,34 +40,28 @@ pub fn routines_to_json(routines: List(Routine)) -> String {
 }
 
 fn steps_decoder() -> Decoder(List(Step)) {
-  let step_decoder =
-    dynamic.decode3(
-      Step,
-      dynamic.field("id", dynamic.string),
-      dynamic.field("text", dynamic.string),
-      dynamic.field("minutes_before", dynamic.int),
-    )
-
-  dynamic.list(step_decoder)
+  let step_decoder = {
+    use id <- decode.field("id", decode.string)
+    use text <- decode.field("text", decode.string)
+    use minutes_before <- decode.field("minutes_before", decode.int)
+    decode.success(Step(id:, text:, minutes_before:))
+  }
+  decode.list(step_decoder)
 }
 
-fn routine_decoder() -> Decoder(Routine) {
-  dynamic.decode2(
-    Routine,
-    dynamic.field("id", dynamic.string),
-    dynamic.field("steps", steps_decoder()),
-  )
-}
-
-pub fn routine_from_json(json_string: String) -> Result(Routine, DecodeError) {
-  json.decode(json_string, routine_decoder())
+fn routines_decoder() -> Decoder(List(Routine)) {
+  let routine_decoder = {
+    use id <- decode.field("id", decode.string)
+    use steps <- decode.field("steps", steps_decoder())
+    decode.success(Routine(id:, steps:))
+  }
+  decode.list(routine_decoder)
 }
 
 pub fn routines_from_json(
   json_string: String,
 ) -> Result(List(Routine), DecodeError) {
-  let routines_decoder = dynamic.list(routine_decoder())
-  json.decode(json_string, routines_decoder)
+  json.parse(json_string, routines_decoder())
 }
 
 pub fn save_routines(routines: List(Routine)) -> Result(Nil, Nil) {
