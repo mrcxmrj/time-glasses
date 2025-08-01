@@ -6,7 +6,7 @@ import gleam/list
 import gleam/result
 
 pub type Routine {
-  Routine(id: String, steps: List(Step))
+  Routine(id: String, name: String, steps: List(Step))
 }
 
 pub type Step {
@@ -24,6 +24,7 @@ fn encode_step(step: Step) -> Json {
 fn encode_routine(routine: Routine) -> Json {
   json.object([
     #("id", json.string(routine.id)),
+    #("name", json.string(routine.name)),
     #("steps", json.preprocessed_array(list.map(routine.steps, encode_step))),
   ])
 }
@@ -52,8 +53,9 @@ fn steps_decoder() -> Decoder(List(Step)) {
 fn routines_decoder() -> Decoder(List(Routine)) {
   let routine_decoder = {
     use id <- decode.field("id", decode.string)
+    use name <- decode.field("name", decode.string)
     use steps <- decode.field("steps", steps_decoder())
-    decode.success(Routine(id:, steps:))
+    decode.success(Routine(id:, name:, steps:))
   }
   decode.list(routine_decoder)
 }

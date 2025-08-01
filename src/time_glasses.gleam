@@ -1,10 +1,8 @@
-import gleam/dynamic/decode
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre
-import lustre/attribute.{type Attribute}
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
@@ -18,22 +16,14 @@ pub fn main() {
   Nil
 }
 
-// type Step {
-//   Step(id: String, text: String, minutes_before: Int)
-// }
-//
-// type Routine {
-//   Routine(id: String, steps: List(Step))
-// }
-
 type Page {
   Home
-  CreateRoutine
   EditRoutine(Routine)
   RunRoutine
 }
 
 type Modal {
+  AddRoutineModal(Routine)
   AddStepModal(Step)
 }
 
@@ -48,6 +38,7 @@ type Model {
 
 type Msg {
   UserClickedAddRoutine
+  UserChangedAddRoutineModalInput(Routine)
   UserAddedRoutine(Routine)
   UserUpdatedRoutine(Routine)
   UserRemovedRoutine(Routine)
@@ -113,15 +104,33 @@ fn get_added_or_updated_steps(steps: List(Step), new_step: Step) -> List(Step) {
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
+    UserClickedAddRoutine -> #(
+      Model(
+        ..model,
+        current_page: Home,
+        visible_modal: Some(
+          AddRoutineModal(
+            Routine(id: new_element_id(model.routines), name: "", steps: []),
+          ),
+        ),
+      ),
+      effect.none(),
+    )
+    UserChangedAddRoutineModalInput(routine) -> {
+      #(
+        Model(..model, visible_modal: Some(AddRoutineModal(routine))),
+        effect.none(),
+      )
+    }
     UserAddedRoutine(routine) -> {
       let updated_routines = [routine, ..model.routines]
       case routine.save_routines(updated_routines) {
         Ok(Nil) -> #(
           Model(
-            ..model,
             current_page: Home,
             routines: updated_routines,
             visible_steps: [],
+            visible_modal: None,
           ),
           effect.none(),
         )
@@ -152,10 +161,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       ),
       effect.none(),
     )
-    UserClickedAddRoutine -> #(
-      Model(..model, current_page: CreateRoutine),
-      effect.none(),
-    )
     UserClickedAddStep -> #(
       Model(
         ..model,
@@ -172,6 +177,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           case modal {
             AddStepModal(step) ->
               AddStepModal(Step(..step, minutes_before: time_value))
+            other_modal -> other_modal
           }
         }),
       ),
@@ -187,6 +193,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         visible_modal: option.map(model.visible_modal, fn(modal) {
           case modal {
             AddStepModal(step) -> AddStepModal(Step(..step, text:))
+            other_modal -> other_modal
           }
         }),
       ),
@@ -227,13 +234,19 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 }
 
 fn view(model: Model) -> Element(Msg) {
+  let modal = case model.visible_modal {
+    Some(AddStepModal(step)) -> add_step_modal(step)
+    Some(AddRoutineModal(routine)) -> add_routine_modal(routine)
+    None -> element.none()
+  }
+
   html.div(
     [attribute.class("container h-screen overflow-auto mx-auto border-x p-4")],
     [
+      modal,
       case model.current_page {
         Home -> view_home(model)
-        CreateRoutine -> view_create_routine(model)
-        EditRoutine(routine) -> view_edit_routine(model, routine)
+        EditRoutine(routine) -> routine_editor(model, routine)
         RunRoutine -> todo
       },
     ],
@@ -247,6 +260,7 @@ fn view_home(model: Model) -> Element(Msg) {
     |> list.reverse()
 
   html.div([], [
+    html.h1([attribute.class("text-2xl font-bold")], [element.text("Routines")]),
     html.button(
       [
         attribute.class(
@@ -260,65 +274,21 @@ fn view_home(model: Model) -> Element(Msg) {
   ])
 }
 
-fn view_create_routine(model: Model) -> Element(Msg) {
-  [
-    event.on_click(
-      UserAddedRoutine(Routine(
-        id: new_element_id(model.routines),
-        steps: model.visible_steps,
-      )),
-    ),
-  ]
-  |> routine_editor(model, _, "create routine")
-}
-
-fn view_edit_routine(model: Model, edited_routine: Routine) -> Element(Msg) {
-  // let on_click =
-  //   event.on("click", {
-  //     // use x <- decode.field("offsetX", decode.int)
-  //     // use y <- decode.field("offsetY", decode.int)
-  //     // use target <- decode.field("target", decode.dynamic)
-  //     use value <- decode.field("value", decode.string)
-  //
-  //     io.print("commiting" <> value <> "!")
-  //     decode.success(
-  //       UserUpdatedRoutine(Routine(
-  //         id: edited_routine.id,
-  //         steps: model.visible_steps,
-  //       )),
-  //     )
-  //   })
-  // let handle_commit = fn(event: Dynamic) -> Result(Msg, List(DecodeError)) {
-  //   use target <- result.try(dynamic.field("target", dynamic.dynamic)(event))
-  //   use value <- result.try(dynamic.field("value", dynamic.string)(target))
-  //   Ok(UserUpdatedRoutine(Routine(id: value, steps: model.visible_steps)))
-  // }
-  [
-    attribute.value(edited_routine.id),
-    event.on_click(
-      UserUpdatedRoutine(Routine(
-        id: edited_routine.id,
-        steps: model.visible_steps,
-      )),
-    ),
-  ]
-  |> routine_editor(model, _, "update routine")
-}
-
-fn routine_editor(
-  model: Model,
-  commit_routine_attrs: List(Attribute(Msg)),
-  commit_routine_label: String,
-) -> Element(Msg) {
+fn routine_editor(model: Model, routine: Routine) -> Element(Msg) {
   let step_tiles = list.map(model.visible_steps, fn(step) { step_tile(step) })
-  let modal = case model.visible_modal {
-    Some(AddStepModal(step)) -> add_step_modal(step)
-    None -> element.none()
-  }
-
   html.div([], [
-    modal,
-    html.button(commit_routine_attrs, [element.text(commit_routine_label)]),
+    html.h1([attribute.class("text-2xl font-bold")], [
+      element.text("Edit routine"),
+    ]),
+    html.button(
+      [
+        attribute.value(routine.id),
+        event.on_click(UserUpdatedRoutine(
+          Routine(..routine, steps: model.visible_steps),
+        )),
+      ],
+      [element.text("back")],
+    ),
     html.button([event.on_click(UserClickedAddStep)], [
       element.text("create step"),
     ]),
@@ -327,7 +297,7 @@ fn routine_editor(
 }
 
 fn routine_tile(routine: Routine) -> Element(Msg) {
-  let text = "This tile has id of " <> routine.id
+  let text = routine.name <> " | id:" <> routine.id
   tile(text, UserClickedRoutine(routine), UserRemovedRoutine(routine))
 }
 
@@ -355,6 +325,7 @@ fn tile(text: String, edit_msg: m, remove_msg: m) -> Element(m) {
   )
 }
 
+// FIXME: stop allowing multiple steps with same time - creates problems when deleting
 fn add_step_modal(step: Step) -> Element(Msg) {
   let handle_time_input = fn(input) {
     case int.parse(input) {
@@ -388,6 +359,32 @@ fn add_step_modal(step: Step) -> Element(Msg) {
         ]),
         element.text(" minutes before"),
         html.button([event.on_click(UserAddedOrUpdatedStep(step))], [
+          element.text("Ok"),
+        ]),
+      ]),
+    ],
+  )
+}
+
+fn add_routine_modal(routine: Routine) -> Element(Msg) {
+  html.div(
+    [
+      attribute.class(
+        "absolute inset-0 z-10 flex justify-center items-center h-screen",
+      ),
+    ],
+    [
+      html.div([attribute.class("h-max w-max p-4 border rounded")], [
+        html.text("Routine name:"),
+        html.input([
+          event.on_input(fn(v) {
+            UserChangedAddRoutineModalInput(Routine(..routine, name: v))
+          }),
+          attribute.type_("text"),
+          attribute.value(routine.name),
+          attribute.min("0"),
+        ]),
+        html.button([event.on_click(UserAddedRoutine(routine))], [
           element.text("Ok"),
         ]),
       ]),
