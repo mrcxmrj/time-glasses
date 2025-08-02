@@ -1,4 +1,6 @@
+import ffi/timeout
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/order.{Eq, Gt, Lt}
@@ -44,6 +46,7 @@ type Msg {
   UserUpdatedRoutine(Routine)
   UserRemovedRoutine(Routine)
   UserClickedRoutine(Routine)
+  UserStartedRoutine(Routine)
 
   UserClickedAddStep
   UserChangedAddStepModalText(String)
@@ -52,6 +55,8 @@ type Msg {
   UserAddedOrUpdatedStep(Step)
   UserClickedStep(Step)
   UserRemovedStep(Step)
+
+  StepTimerFinished(Step)
 }
 
 fn init(_flags) -> #(Model, Effect(Msg)) {
@@ -203,6 +208,9 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       ),
       effect.none(),
     )
+    // FIXME: this should also update the localstorage
+    // also localstorage updates should be written as effects
+    // update functions should be pure!
     UserAddedOrUpdatedStep(step) -> {
       #(
         Model(
@@ -244,6 +252,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       ),
       effect.none(),
     )
+    UserStartedRoutine(routine) -> #(
+      model,
+      effect.batch(list.map(routine.steps, start_timer)),
+    )
+    StepTimerFinished(step) -> {
+      io.print(step.text <> " finished!")
+      #(model, effect.none())
+    }
   }
 }
 
@@ -294,17 +310,22 @@ fn routine_editor(model: Model, routine: Routine) -> Element(Msg) {
     html.h1([attribute.class("text-2xl font-bold")], [
       element.text("Edit routine"),
     ]),
-    html.button(
-      [
-        attribute.value(routine.id),
-        event.on_click(UserUpdatedRoutine(
-          Routine(..routine, steps: model.visible_steps),
-        )),
-      ],
-      [element.text("back")],
-    ),
-    html.button([event.on_click(UserClickedAddStep)], [
-      element.text("create step"),
+    html.div([attribute.class("flex gap-4")], [
+      html.button(
+        [
+          attribute.value(routine.id),
+          event.on_click(UserUpdatedRoutine(
+            Routine(..routine, steps: model.visible_steps),
+          )),
+        ],
+        [element.text("back")],
+      ),
+      html.button([event.on_click(UserClickedAddStep)], [
+        element.text("create step"),
+      ]),
+      html.button([event.on_click(UserStartedRoutine(routine))], [
+        element.text("start routine"),
+      ]),
     ]),
     ..step_tiles
   ])
@@ -354,7 +375,7 @@ fn add_step_modal(step: Step) -> Element(Msg) {
       ),
     ],
     [
-      html.div([attribute.class("h-max w-max p-4 border rounded")], [
+      html.div([attribute.class("h-max w-max p-4 border rounded bg-white")], [
         element.text("I need to "),
         html.input([
           event.on_input(UserChangedAddStepModalText),
@@ -388,7 +409,7 @@ fn add_routine_modal(routine: Routine) -> Element(Msg) {
       ),
     ],
     [
-      html.div([attribute.class("h-max w-max p-4 border rounded")], [
+      html.div([attribute.class("h-max w-max p-4 border rounded bg-white")], [
         html.text("Routine name:"),
         html.input([
           event.on_input(fn(v) {
@@ -404,4 +425,13 @@ fn add_routine_modal(routine: Routine) -> Element(Msg) {
       ]),
     ],
   )
+}
+
+fn start_timer(step: Step) -> Effect(Msg) {
+  effect.from(fn(dispatch) {
+    timeout.set_timeout(step.minutes_before * 6000, fn() {
+      dispatch(StepTimerFinished(step))
+    })
+    Nil
+  })
 }
