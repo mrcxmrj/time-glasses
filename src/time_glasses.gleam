@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order.{Eq, Gt, Lt}
 import lustre
 import lustre/attribute
 import lustre/effect.{type Effect}
@@ -94,7 +95,10 @@ fn get_updated_steps(steps: List(Step), new_step: Step) -> List(Step) {
   get_updated_elements(steps, fn(r) { r.id }, new_step, new_step.id)
 }
 
-fn get_added_or_updated_steps(steps: List(Step), new_step: Step) -> List(Step) {
+fn get_updated_or_extended_steps(
+  steps: List(Step),
+  new_step: Step,
+) -> List(Step) {
   let updated_steps = get_updated_steps(steps, new_step)
   case updated_steps == steps {
     True -> [new_step, ..steps]
@@ -203,7 +207,17 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       #(
         Model(
           ..model,
-          visible_steps: get_added_or_updated_steps(model.visible_steps, step),
+          visible_steps: get_updated_or_extended_steps(
+              model.visible_steps,
+              step,
+            )
+            |> list.sort(fn(a, b) {
+              case a.minutes_before, b.minutes_before {
+                x, y if x < y -> Lt
+                x, y if x == y -> Eq
+                _, _ -> Gt
+              }
+            }),
           visible_modal: None,
         ),
         effect.none(),
